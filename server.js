@@ -2,7 +2,7 @@ const express = require('express');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
 
-// const api = require('./api');
+const api = require('./api');
 const { connectToDB } = require('./lib/mongo');
 
 const app = express();
@@ -13,7 +13,7 @@ app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// app.use('/', api);
+app.use('/', api);
 
 app.use('*', (req, res) => {
   res.status(404).json({

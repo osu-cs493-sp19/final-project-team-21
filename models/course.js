@@ -68,9 +68,40 @@ const getCourseDetailsById = async (id) => {
   return course;
 };
 
+const updateCourseById = async (id, rawFields) => {
+  const newFields = extractValidFields(rawFields, CourseSchema);
+  const db = getDBReference();
+  const collection = db.collection('courses');
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+  const result = await collection
+    .updateOne({ _id: new ObjectId(id) }, newFields);
+  if (result.matchedCount === 0) {
+    return null;
+  }
+  return true;
+};
+
+const deleteCourseById = async (id) => {
+  const db = getDBReference();
+  const collection = db.collection('courses');
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+  const result = await collection
+    .deleteOne({ _id: new ObjectId(id) });
+  if (result.deletedCount === 0) {
+    return null;
+  }
+  return true;
+};
+
 module.exports = {
   CourseSchema,
   getCoursesPage,
   insertNewCourse,
   getCourseDetailsById,
+  updateCourseById,
+  deleteCourseById,
 };

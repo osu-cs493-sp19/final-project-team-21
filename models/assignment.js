@@ -36,8 +36,39 @@ const getAssignmentDetailsById = async (id) => {
   return assignment;
 };
 
+const updateAssignmentById = async (id, rawFields) => {
+  const newFields = extractValidFields(rawFields, AssignmentSchema);
+  const db = getDBReference();
+  const collection = db.collection('assignments');
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+  const result = await collection
+    .updateOne({ _id: new ObjectId(id) }, newFields);
+  if (result.matchedCount === 0) {
+    return null;
+  }
+  return true;
+};
+
+const deleteAssignmentById = async (id) => {
+  const db = getDBReference();
+  const collection = db.collection('assignments');
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+  const result = await collection
+    .deleteOne({ _id: new ObjectId(id) });
+  if (result.deletedCount === 0) {
+    return null;
+  }
+  return true;
+};
+
 module.exports = {
   AssignmentSchema,
   insertNewAssignment,
   getAssignmentDetailsById,
+  updateAssignmentById,
+  deleteAssignmentById,
 };
