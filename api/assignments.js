@@ -4,7 +4,7 @@ const { validateAgainstSchema } = require('../lib/validation');
 const {
   AssignmentSchema,
   insertNewAssignment,
-  getAssignmentDetailsById,
+  getAssignmentById,
   updateAssignmentById,
   deleteAssignmentById,
 } = require('../models/assignment');
@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const assignment = await getAssignmentDetailsById(req.params.id);
+    const assignment = await getAssignmentById(req.params.id);
     if (assignment) {
       res.status(200).send(assignment);
     } else {

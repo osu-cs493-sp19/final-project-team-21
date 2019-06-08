@@ -30,10 +30,13 @@ const getAssignmentById = async (id) => {
   return results[0];
 };
 
-// TODO Implement
-const getAssignmentDetailsById = async (id) => {
-  const assignment = await getAssignmentById(id);
-  return assignment;
+const getAssignmentsByCourseId = async (courseId) => {
+  const db = getDBReference();
+  const collection = db.collection('assignments');
+  const results = await collection
+    .find({ courseId })
+    .toArray();
+  return results;
 };
 
 const updateAssignmentById = async (id, rawFields) => {
@@ -68,7 +71,8 @@ const deleteAssignmentById = async (id) => {
 module.exports = {
   AssignmentSchema,
   insertNewAssignment,
-  getAssignmentDetailsById,
+  getAssignmentById,
+  getAssignmentsByCourseId,
   updateAssignmentById,
   deleteAssignmentById,
 };

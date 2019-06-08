@@ -5,7 +5,7 @@ const {
   CourseSchema,
   getCoursesPage,
   insertNewCourse,
-  getCourseDetailsById,
+  getCourseById,
   updateCourseById,
   deleteCourseById,
 } = require('../models/course');
@@ -17,6 +17,9 @@ router.get('/', async (req, res) => {
      * send response.
      */
     const coursePage = await getCoursesPage(parseInt(req.query.page, 10) || 1);
+    coursePage.courses.forEach((course) => {
+      delete course.enrolled;
+    });
     coursePage.links = {};
     if (coursePage.page < coursePage.totalPages) {
       coursePage.links.nextPage = `/courses?page=${coursePage.page + 1}`;
@@ -60,8 +63,9 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const course = await getCourseDetailsById(req.params.id);
+    const course = await getCourseById(req.params.id);
     if (course) {
+      delete course.enrolled;
       res.status(200).send(course);
     } else {
       next();

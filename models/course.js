@@ -62,10 +62,13 @@ const getCourseById = async (id) => {
   return results[0];
 };
 
-// TODO Implement
-const getCourseDetailsById = async (id) => {
-  const course = await getCourseById(id);
-  return course;
+const getCoursesByQuery = async (query) => {
+  const db = getDBReference();
+  const collection = db.collection('courses');
+  const results = await collection
+    .find(query)
+    .toArray();
+  return results;
 };
 
 const updateCourseById = async (id, rawFields) => {
@@ -101,7 +104,8 @@ module.exports = {
   CourseSchema,
   getCoursesPage,
   insertNewCourse,
-  getCourseDetailsById,
+  getCourseById,
+  getCoursesByQuery,
   updateCourseById,
   deleteCourseById,
 };
