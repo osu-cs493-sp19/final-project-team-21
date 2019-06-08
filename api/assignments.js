@@ -54,7 +54,7 @@ router.patch('/:id', async (req, res, next) => {
     PatchAssignmentSchema[key] = { required: false };
   });
   if (validateAgainstSchema(req.body, PatchAssignmentSchema)) {
-    const result = await updateAssignmentById(req.params.id);
+    const result = await updateAssignmentById(req.params.id, req.body);
     if (result) {
       res.status(200).json({
         links: {

@@ -80,7 +80,7 @@ router.patch('/:id', async (req, res, next) => {
     PatchCourseSchema[key] = { required: false };
   });
   if (validateAgainstSchema(req.body, PatchCourseSchema)) {
-    const result = await updateCourseById(req.params.id);
+    const result = await updateCourseById(req.params.id, req.body);
     if (result) {
       res.status(200).json({
         links: {

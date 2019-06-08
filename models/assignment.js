@@ -44,7 +44,7 @@ const updateAssignmentById = async (id, rawFields) => {
     return null;
   }
   const result = await collection
-    .updateOne({ _id: new ObjectId(id) }, newFields);
+    .updateOne({ _id: new ObjectId(id) }, { $set: newFields });
   if (result.matchedCount === 0) {
     return null;
   }
