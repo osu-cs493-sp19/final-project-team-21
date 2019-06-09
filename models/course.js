@@ -86,6 +86,31 @@ const updateCourseById = async (id, rawFields) => {
   return true;
 };
 
+const updateEnrolledById = async (id, rawChanges) => {
+  const changes = extractValidFields(rawChanges, { add: null, remove: null });
+  changes.add = changes.add.map(studentId => new ObjectId(studentId));
+  changes.remove = changes.remove.map(studentId => new ObjectId(studentId));
+  const db = getDBReference();
+  const collection = db.collection('courses');
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+  const result = await collection
+    .updateOne(
+      { _id: new ObjectId(id) },
+      { $addToSet: { enrolled: { $each: changes.add } } },
+    );
+  if (result.matchedCount === 0) {
+    return null;
+  }
+  await collection
+    .updateOne(
+      { _id: new ObjectId(id) },
+      { $pullAll: { enrolled: changes.remove } },
+    );
+  return true;
+};
+
 const deleteCourseById = async (id) => {
   const db = getDBReference();
   const collection = db.collection('courses');
@@ -107,5 +132,6 @@ module.exports = {
   getCourseById,
   getCoursesByQuery,
   updateCourseById,
+  updateEnrolledById,
   deleteCourseById,
 };

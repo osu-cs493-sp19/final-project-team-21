@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const { ObjectId } = require('mongodb');
 
 const { validateAgainstSchema } = require('../lib/validation');
 const {
@@ -7,6 +8,7 @@ const {
   insertNewCourse,
   getCourseById,
   updateCourseById,
+  updateEnrolledById,
   deleteCourseById,
 } = require('../models/course');
 
@@ -86,7 +88,7 @@ router.patch('/:id', async (req, res, next) => {
   if (validateAgainstSchema(req.body, PatchCourseSchema)) {
     const result = await updateCourseById(req.params.id, req.body);
     if (result) {
-      res.status(200).json({
+      res.status(200).send({
         links: {
           course: `/courses/${req.params.id}`,
         },
@@ -95,7 +97,7 @@ router.patch('/:id', async (req, res, next) => {
       next();
     }
   } else {
-    res.status(400).json({ error: 'Request body is not a valid course object' });
+    res.status(400).send({ error: 'Request body is not a valid course object' });
   }
 });
 
@@ -105,6 +107,57 @@ router.delete('/:id', async (req, res, next) => {
     res.status(204).send();
   } else {
     next();
+  }
+});
+
+router.get('/:id/students', async (req, res, next) => {
+  try {
+    const course = await getCourseById(req.params.id);
+    if (course) {
+      const response = { students: course.enrolled };
+      res.status(200).send(response);
+    } else {
+      next();
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      error: 'Unable to fetch course. Please try again later.',
+    });
+  }
+});
+
+router.post('/:id/students', async (req, res, next) => {
+  const changes = req.body;
+  ['add', 'remove'].forEach((field) => {
+    if (field in changes) {
+      changes[field].forEach((studentId) => {
+        if (!ObjectId.isValid(studentId)) {
+          return res.status(400).send({
+            error: 'Request body contained badly formatted student ID(s).',
+          });
+        }
+      });
+    } else {
+      changes[field] = [];
+    }
+  });
+  try {
+    const result = await updateEnrolledById(req.params.id, changes);
+    if (result) {
+      res.status(200).send({
+        links: {
+          students: `/courses/${req.params.id}/students`,
+        },
+      });
+    } else {
+      next();
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      error: 'Unable to update course students. Please try again later.',
+    });
   }
 });
 
