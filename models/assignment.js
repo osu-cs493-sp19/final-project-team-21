@@ -1,4 +1,6 @@
-const { ObjectId } = require('mongodb');
+const fs = require('fs');
+
+const { ObjectId, GridFSBucket } = require('mongodb');
 
 const { getDBReference } = require('../lib/mongo');
 const { extractValidFields } = require('../lib/validation');
@@ -8,6 +10,11 @@ const AssignmentSchema = {
   title: { required: true },
   points: { required: true },
   due: { required: true },
+};
+
+const SubmissionSchema = {
+  studentId: { required: true },
+  timestamp: { required: true },
 };
 
 const insertNewAssignment = async (rawAssignment) => {
@@ -71,11 +78,102 @@ const deleteAssignmentById = async (id) => {
   return true;
 };
 
+const insertNewSubmission = submission => new Promise((resolve, reject) => {
+  const db = getDBReference();
+  const bucket = new GridFSBucket(db, { bucketName: 'submissions' });
+
+  const metadata = {
+    contentType: submission.contentType,
+    studentId: submission.studentId,
+    assignmentId: submission.assignmentId,
+    timestamp: submission.timestamp,
+  };
+
+  const uploadStream = bucket.openUploadStream(
+    submission.filename,
+    { metadata },
+  );
+
+  fs.createReadStream(submission.path)
+    .pipe(uploadStream)
+    .on('error', (err) => {
+      reject(err);
+    })
+    .on('finish', (result) => {
+      resolve(result._id);
+    });
+});
+
+const getSubmissionsPageByAssignmentId = async (id, rawPage) => {
+  const db = getDBReference();
+  const collection = db.collection('submissions.files');
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+
+  const count = await collection.countDocuments({ 'metadata.assignmentId': id });
+  /*
+   * Compute last page number and make sure page is within allowed bounds.
+   * Compute offset into collection.
+   */
+  const pageSize = 10;
+  const lastPage = Math.ceil(count / pageSize);
+  let page = rawPage;
+  page = page > lastPage ? lastPage : page;
+  page = page < 1 ? 1 : page;
+  const offset = (page - 1) * pageSize;
+
+  const results = await collection.find({ 'metadata.assignmentId': id })
+    .sort({ _id: 1 })
+    .skip(offset)
+    .limit(pageSize)
+    .toArray();
+
+  return {
+    submissions: results,
+    page,
+    totalPages: lastPage,
+    pageSize,
+    count,
+  };
+};
+
+const addSubmissionUrl = async (id) => {
+  const db = getDBReference();
+  const collection = db.collection('submissions.files');
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+  const result = await collection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { 'metadata.url': `/media/submissions/${id}` } },
+  );
+  return result.matchedCount > 0;
+};
+
+const getDownloadStreamById = async (id) => {
+  const db = getDBReference();
+  const bucket = new GridFSBucket(db, { bucketName: 'submissions' });
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+  const results = await bucket
+    .find({ _id: new ObjectId(id) })
+    .toArray();
+  const result = results[0];
+  return bucket.openDownloadStreamByName(result.filename);
+};
+
 module.exports = {
   AssignmentSchema,
+  SubmissionSchema,
   insertNewAssignment,
   getAssignmentById,
   getAssignmentsByCourseId,
   updateAssignmentById,
   deleteAssignmentById,
+  insertNewSubmission,
+  getSubmissionsPageByAssignmentId,
+  addSubmissionUrl,
+  getDownloadStreamById,
 };
