@@ -69,15 +69,21 @@ const updateAssignmentById = async (id, rawFields) => {
 
 const deleteAssignmentById = async (id) => {
   const db = getDBReference();
-  const collection = db.collection('assignments');
+  const assignmentsCollection = db.collection('assignments');
+  const filesCollection = db.collection('submissions.files');
+  const bucket = new GridFSBucket(db, { bucketName: 'submissions' });
   if (!ObjectId.isValid(id)) {
     return null;
   }
-  const result = await collection
+  const result = await assignmentsCollection
     .deleteOne({ _id: new ObjectId(id) });
   if (result.deletedCount === 0) {
     return null;
   }
+  const submissions = await filesCollection
+    .find({ 'metadata.assignmentId': id })
+    .toArray();
+  await Promise.all(submissions.map(async submission => bucket.delete(submission._id)));
   return true;
 };
 
@@ -163,6 +169,9 @@ const getDownloadStreamById = async (id) => {
   const results = await bucket
     .find({ _id: new ObjectId(id) })
     .toArray();
+  if (results.length === 0) {
+    return null;
+  }
   const result = results[0];
   return bucket.openDownloadStreamByName(result.filename);
 };

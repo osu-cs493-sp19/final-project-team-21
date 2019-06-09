@@ -2,6 +2,7 @@ const { ObjectId } = require('mongodb');
 
 const { getDBReference } = require('../lib/mongo');
 const { extractValidFields } = require('../lib/validation');
+const { getAssignmentsByCourseId, deleteAssignmentById } = require('./assignment');
 
 const CourseSchema = {
   subject: { required: true },
@@ -122,6 +123,10 @@ const deleteCourseById = async (id) => {
   if (result.deletedCount === 0) {
     return null;
   }
+  const assignments = await getAssignmentsByCourseId(id);
+  await Promise.all(assignments.map(
+    async assignment => deleteAssignmentById(assignment._id.toString())
+  ));
   return true;
 };
 
