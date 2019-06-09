@@ -19,6 +19,7 @@ const SubmissionSchema = {
 
 const insertNewAssignment = async (rawAssignment) => {
   const assignment = extractValidFields(rawAssignment, AssignmentSchema);
+  assignment.courseId = new ObjectId(assignment.courseId);
   const db = getDBReference();
   const collection = db.collection('assignments');
   const result = await collection.insertOne(assignment);
@@ -51,6 +52,8 @@ const getAssignmentsByCourseId = async (courseId) => {
 
 const updateAssignmentById = async (id, rawFields) => {
   const newFields = extractValidFields(rawFields, AssignmentSchema);
+  // We have already confirmed that courseId is the same so it does not need to be updated
+  delete newFields.courseId;
   const db = getDBReference();
   const collection = db.collection('assignments');
   if (!ObjectId.isValid(id)) {

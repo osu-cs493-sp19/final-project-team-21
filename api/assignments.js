@@ -1,6 +1,7 @@
 const fsPromises = require('fs').promises;
 
 const router = require('express').Router();
+const { ObjectId } = require('mongodb');
 const multer = require('multer');
 
 const { validateAgainstSchema } = require('../lib/validation');
@@ -24,19 +25,25 @@ const removeUploadedFile = async (file) => {
 
 router.post('/', async (req, res) => {
   if (validateAgainstSchema(req.body, AssignmentSchema)) {
-    try {
-      const id = await insertNewAssignment(req.body);
-      res.status(201).send({
-        id,
-        links: {
-          assignment: `/assignments/${id}`,
-        },
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).send({
-        error: 'Error inserting assignment into DB. Please try again later.',
-      });
+    if (ObjectId.isValid(req.body.courseId)) {
+      try {
+        const id = await insertNewAssignment(req.body);
+        res.status(201).send({
+          id,
+          links: {
+            assignment: `/assignments/${id}`,
+          },
+        });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({
+          error: 'Error inserting assignment into DB. Please try again later.',
+        });
+      }
+    } else {
+      res.status(400).send({
+        error: 'Request body contained badly formatted courseId',
+      })
     }
   } else {
     res.status(400).send({
@@ -62,11 +69,18 @@ router.get('/:id', async (req, res, next) => {
 });
 
 router.patch('/:id', async (req, res, next) => {
-  const PatchAssignmentSchema = AssignmentSchema;
-  Object.keys(PatchAssignmentSchema).forEach((key) => {
-    PatchAssignmentSchema[key] = { required: false };
-  });
-  if (validateAgainstSchema(req.body, PatchAssignmentSchema)) {
+  const assignment = await getAssignmentById(req.params.id);
+  if (!assignment) {
+    next();
+  } else if ('courseId' in req.body && !ObjectId.isValid(req.body.courseId)) {
+    res.status(400).send({
+      error: 'courseId was badly formatted.',
+    });
+  } else if ('courseId' in req.body && req.body.courseId !== assignment.courseId.toString()) {
+    res.status(400).send({
+      error: 'Assignment\'s courseId must not be modified.',
+    });
+  } else {
     const result = await updateAssignmentById(req.params.id, req.body);
     if (result) {
       res.status(200).json({
@@ -77,8 +91,6 @@ router.patch('/:id', async (req, res, next) => {
     } else {
       next();
     }
-  } else {
-    res.status(400).json({ error: 'Request body is not a valid assignment object' });
   }
 });
 
