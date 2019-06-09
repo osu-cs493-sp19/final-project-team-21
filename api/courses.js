@@ -11,6 +11,7 @@ const {
   updateEnrolledById,
   deleteCourseById,
 } = require('../models/course');
+const { getAssignmentsByCourseId } = require('../models/assignment');
 const { getUsersByQuery } = require('../models/user');
 
 router.get('/', async (req, res) => {
@@ -175,6 +176,24 @@ router.get('/:id/roster', async (req, res, next) => {
 
       res.setHeader('Content-Type', 'text/csv');
       res.status(200).send(csvString);
+    } else {
+      next();
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      error: 'Unable to fetch course. Please try again later.',
+    });
+  }
+});
+
+router.get('/:id/assignments', async (req, res, next) => {
+  try {
+    const course = await getCourseById(req.params.id);
+    if (course) {
+      const assignments = await getAssignmentsByCourseId(req.params.id);
+      const assignmentIds = assignments.map(assignment => assignment._id);
+      res.status(200).send({ assignments: assignmentIds });
     } else {
       next();
     }

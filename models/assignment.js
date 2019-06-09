@@ -33,8 +33,11 @@ const getAssignmentById = async (id) => {
 const getAssignmentsByCourseId = async (courseId) => {
   const db = getDBReference();
   const collection = db.collection('assignments');
+  if (!ObjectId.isValid(courseId)) {
+    return null;
+  }
   const results = await collection
-    .find({ courseId })
+    .find({ courseId: new ObjectId(courseId) })
     .toArray();
   return results;
 };
