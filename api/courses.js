@@ -167,11 +167,11 @@ router.get('/:id/roster', async (req, res, next) => {
   try {
     const course = await getCourseById(req.params.id);
     if (course) {
-      let csvString = '_id,name,email\n';
+      let csvString = 'id,name,email';
       const query = { _id: { $in: course.enrolled } };
       const students = await getUsersByQuery(query);
       students.forEach((student) => {
-        csvString += `${student._id},${student.name},${student.email}\n`;
+        csvString += `\n${student._id},${student.name},${student.email}`;
       });
 
       res.setHeader('Content-Type', 'text/csv');
