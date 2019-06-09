@@ -11,6 +11,7 @@ const {
   updateEnrolledById,
   deleteCourseById,
 } = require('../models/course');
+const { getUsersByQuery } = require('../models/user');
 
 router.get('/', async (req, res) => {
   try {
@@ -157,6 +158,30 @@ router.post('/:id/students', async (req, res, next) => {
     console.error(err);
     res.status(500).send({
       error: 'Unable to update course students. Please try again later.',
+    });
+  }
+});
+
+router.get('/:id/roster', async (req, res, next) => {
+  try {
+    const course = await getCourseById(req.params.id);
+    if (course) {
+      let csvString = '_id,name,email\n';
+      const query = { _id: { $in: course.enrolled } };
+      const students = await getUsersByQuery(query);
+      students.forEach((student) => {
+        csvString += `${student._id},${student.name},${student.email}\n`;
+      });
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.status(200).send(csvString);
+    } else {
+      next();
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      error: 'Unable to fetch course. Please try again later.',
     });
   }
 });
