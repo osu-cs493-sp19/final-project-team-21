@@ -81,7 +81,7 @@ const deleteAssignmentById = async (id) => {
     return null;
   }
   const submissions = await filesCollection
-    .find({ 'metadata.assignmentId': id })
+    .find({ 'metadata.assignmentId': new ObjectId(id) })
     .toArray();
   await Promise.all(submissions.map(async submission => bucket.delete(submission._id)));
   return true;
@@ -93,8 +93,8 @@ const insertNewSubmission = submission => new Promise((resolve, reject) => {
 
   const metadata = {
     contentType: submission.contentType,
-    studentId: submission.studentId,
-    assignmentId: submission.assignmentId,
+    studentId: new ObjectId(submission.studentId),
+    assignmentId: new ObjectId(submission.assignmentId),
     timestamp: submission.timestamp,
   };
 
@@ -113,26 +113,40 @@ const insertNewSubmission = submission => new Promise((resolve, reject) => {
     });
 });
 
-const getSubmissionsPageByAssignmentId = async (id, rawPage) => {
+const getSubmissionsPageByAssignmentId = async (id, params) => {
   const db = getDBReference();
   const collection = db.collection('submissions.files');
   if (!ObjectId.isValid(id)) {
     return null;
   }
 
-  const count = await collection.countDocuments({ 'metadata.assignmentId': id });
+  const query = { 'metadata.assignmentId': new ObjectId(id) };
+  if ('studentId' in params) {
+    if (!ObjectId.isValid(params.studentId)) {
+      return {
+        submissions: [],
+        page: 1,
+        totalPages: 0,
+        pageSize: 10,
+        count: 0,
+      };
+    }
+    query['metadata.studentId'] = new ObjectId(params.studentId);
+  }
+
+  const count = await collection.countDocuments(query);
   /*
    * Compute last page number and make sure page is within allowed bounds.
    * Compute offset into collection.
    */
   const pageSize = 10;
   const lastPage = Math.ceil(count / pageSize);
-  let page = rawPage;
+  let page = parseInt(params.page, 10) || 1;
   page = page > lastPage ? lastPage : page;
   page = page < 1 ? 1 : page;
   const offset = (page - 1) * pageSize;
 
-  const results = await collection.find({ 'metadata.assignmentId': id })
+  const results = await collection.find(query)
     .sort({ _id: 1 })
     .skip(offset)
     .limit(pageSize)

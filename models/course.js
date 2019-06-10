@@ -12,10 +12,18 @@ const CourseSchema = {
   instructorId: { required: true },
 };
 
-const getCoursesPage = async (rawPage) => {
+const getCoursesPage = async (params) => {
   const db = getDBReference();
   const collection = db.collection('courses');
-  const count = await collection.countDocuments();
+
+  const query = {};
+  ['subject', 'number', 'term'].forEach((field) => {
+    if (field in params) {
+      query[field] = params[field];
+    }
+  });
+
+  const count = await collection.countDocuments(query);
 
   /*
    * Compute last page number and make sure page is within allowed bounds.
@@ -23,12 +31,12 @@ const getCoursesPage = async (rawPage) => {
    */
   const pageSize = 10;
   const lastPage = Math.ceil(count / pageSize);
-  let page = rawPage;
+  let page = parseInt(params.page, 10) || 1;
   page = page > lastPage ? lastPage : page;
   page = page < 1 ? 1 : page;
   const offset = (page - 1) * pageSize;
 
-  const results = await collection.find({})
+  const results = await collection.find(query)
     .sort({ _id: 1 })
     .skip(offset)
     .limit(pageSize)

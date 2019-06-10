@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
      * Fetch page info, generate HATEOAS links for surrounding pages and then
      * send response.
      */
-    const coursePage = await getCoursesPage(parseInt(req.query.page, 10) || 1);
+    const coursePage = await getCoursesPage(req.query);
     coursePage.courses.forEach((course) => {
       delete course.enrolled;
     });

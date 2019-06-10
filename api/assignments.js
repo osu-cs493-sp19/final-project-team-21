@@ -17,6 +17,8 @@ const {
   addSubmissionUrl,
 } = require('../models/assignment');
 
+const { getUserDetailsById } = require('../models/user');
+
 const upload = multer({ dest: `${__dirname}/uploads` });
 
 const removeUploadedFile = async (file) => {
@@ -109,7 +111,7 @@ router.get('/:id/submissions', async (req, res, next) => {
     if (assignment) {
       const submissionsPage = await getSubmissionsPageByAssignmentId(
         req.params.id,
-        parseInt(req.query.page, 10) || 1,
+        req.query,
       );
 
       submissionsPage.links = {};
@@ -147,20 +149,27 @@ router.post('/:id/submissions', upload.single('file'), async (req, res, next) =>
     try {
       const assignment = await getAssignmentById(req.params.id);
       if (assignment) {
-        const submission = {
-          path: req.file.path,
-          filename: req.file.filename,
-          contentType: req.file.mimetype,
-          studentId: req.body.studentId,
-          assignmentId: req.params.id,
-          timestamp: req.body.timestamp,
-        };
-        const id = await insertNewSubmission(submission);
-        await Promise.all([
-          addSubmissionUrl(id),
-          removeUploadedFile(req.file),
-        ]);
-        res.status(201).send({ id });
+        const user = await getUserDetailsById(req.body.studentId);
+        if (user) {
+          const submission = {
+            path: req.file.path,
+            filename: req.file.filename,
+            contentType: req.file.mimetype,
+            studentId: req.body.studentId,
+            assignmentId: req.params.id,
+            timestamp: req.body.timestamp,
+          };
+          const id = await insertNewSubmission(submission);
+          await Promise.all([
+            addSubmissionUrl(id),
+            removeUploadedFile(req.file),
+          ]);
+          res.status(201).send({ id });
+        } else {
+          res.status(400).send({
+            error: 'studentId does not belong to a valid student',
+          });
+        }
       } else {
         next();
       }
