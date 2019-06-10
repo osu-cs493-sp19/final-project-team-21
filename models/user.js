@@ -80,6 +80,7 @@ module.exports = {
   UserSchema,
   insertNewUser,
   getUserByEmail,
+  getUserById,
   getUserDetailsById,
   getUsersByQuery,
   validateUser,

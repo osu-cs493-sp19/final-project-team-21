@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { ObjectId } = require('mongodb');
 
+const { requireAuthentication } = require('../lib/auth');
 const { validateAgainstSchema } = require('../lib/validation');
 const {
   CourseSchema,
@@ -12,7 +13,7 @@ const {
   deleteCourseById,
 } = require('../models/course');
 const { getAssignmentsByCourseId } = require('../models/assignment');
-const { getUsersByQuery } = require('../models/user');
+const { getUserById, getUsersByQuery } = require('../models/user');
 
 router.get('/', async (req, res) => {
   try {
@@ -42,26 +43,39 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
-  if (validateAgainstSchema(req.body, CourseSchema)) {
-    try {
-      const id = await insertNewCourse(req.body);
-      res.status(201).send({
-        id,
-        links: {
-          course: `/courses/${id}`,
-        },
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).send({
-        error: 'Error inserting course into DB. Please try again later.',
+router.post('/', requireAuthentication, async (req, res) => {
+  if (req.user.role === 'admin') {
+    if (validateAgainstSchema(req.body, CourseSchema)) {
+      try {
+        const user = await getUserById(req.body.instructorId);
+        if (user && user.role === 'instructor') {
+          const id = await insertNewCourse(req.body);
+          res.status(201).send({
+            id,
+            links: {
+              course: `/courses/${id}`,
+            },
+          });
+        } else {
+          res.status(400).send({
+            error: 'instructorId does not belong to valid instructor',
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({
+          error: 'Error inserting course into DB. Please try again later.',
+        });
+      }
+    } else {
+      res.status(400).send({
+        error: 'Request body is not a valid course object.',
       });
     }
   } else {
-    res.status(400).send({
-      error: 'Request body is not a valid course object.',
-    });
+    res.status(403).send({
+      error: 'This action requires admin authentication',
+    })
   }
 });
 
@@ -82,42 +96,65 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', requireAuthentication, async (req, res, next) => {
   const PatchCourseSchema = CourseSchema;
   Object.keys(PatchCourseSchema).forEach((key) => {
     PatchCourseSchema[key] = { required: false };
   });
-  if (validateAgainstSchema(req.body, PatchCourseSchema)) {
-    const result = await updateCourseById(req.params.id, req.body);
-    if (result) {
-      res.status(200).send({
-        links: {
-          course: `/courses/${req.params.id}`,
-        },
-      });
+  const course = await getCourseById(req.params.id);
+  if (course) {
+    if (req.user.role === 'admin' || req.user.id === course.instructorId.toString()) {
+      if (validateAgainstSchema(req.body, PatchCourseSchema)) {
+        const result = await updateCourseById(req.params.id, req.body);
+        if (result) {
+          res.status(200).send({
+            links: {
+              course: `/courses/${req.params.id}`,
+            },
+          });
+        } else {
+          next();
+        }
+      } else {
+        res.status(400).send({ error: 'Request body is not a valid course object' });
+      }
     } else {
-      next();
+      res.status(403).send({
+        error: 'This action requires admin or course instructor authentication',
+      });
     }
-  } else {
-    res.status(400).send({ error: 'Request body is not a valid course object' });
-  }
-});
-
-router.delete('/:id', async (req, res, next) => {
-  const result = await deleteCourseById(req.params.id);
-  if (result) {
-    res.status(204).send();
   } else {
     next();
   }
 });
 
-router.get('/:id/students', async (req, res, next) => {
+router.delete('/:id', requireAuthentication, async (req, res, next) => {
+  if (req.user.role === 'admin') {
+    const result = await deleteCourseById(req.params.id);
+    if (result) {
+      res.status(204).send();
+    } else {
+      next();
+    }
+  } else {
+    res.status(403).send({
+      error: 'This action requires admin authentication',
+    });
+  }
+});
+
+router.get('/:id/students', requireAuthentication, async (req, res, next) => {
   try {
     const course = await getCourseById(req.params.id);
     if (course) {
-      const response = { students: course.enrolled };
-      res.status(200).send(response);
+      if (req.user.role === 'admin' || req.user.id === course.instructorId.toString()) {
+        const response = { students: course.enrolled };
+        res.status(200).send(response);
+      } else {
+        res.status(403).send({
+          error: 'This action requires admin or course instructor authentication',
+        });
+      }
     } else {
       next();
     }
@@ -129,7 +166,7 @@ router.get('/:id/students', async (req, res, next) => {
   }
 });
 
-router.post('/:id/students', async (req, res, next) => {
+router.post('/:id/students', requireAuthentication, async (req, res, next) => {
   const changes = req.body;
   ['add', 'remove'].forEach((field) => {
     if (field in changes) {
@@ -145,13 +182,24 @@ router.post('/:id/students', async (req, res, next) => {
     }
   });
   try {
-    const result = await updateEnrolledById(req.params.id, changes);
-    if (result) {
-      res.status(200).send({
-        links: {
-          students: `/courses/${req.params.id}/students`,
-        },
-      });
+    const course = await getCourseById(req.params.id);
+    if (course) {
+      if (req.user.role === 'admin' || req.user.id === course.instructorId.toString()) {
+        const result = await updateEnrolledById(req.params.id, changes);
+        if (result) {
+          res.status(200).send({
+            links: {
+              students: `/courses/${req.params.id}/students`,
+            },
+          });
+        } else {
+          next();
+        }
+      } else {
+        res.status(403).send({
+          error: 'This action requires admin or course instructor authentication',
+        });
+      }
     } else {
       next();
     }
@@ -163,19 +211,25 @@ router.post('/:id/students', async (req, res, next) => {
   }
 });
 
-router.get('/:id/roster', async (req, res, next) => {
+router.get('/:id/roster', requireAuthentication, async (req, res, next) => {
   try {
     const course = await getCourseById(req.params.id);
     if (course) {
-      let csvString = 'id,name,email';
-      const query = { _id: { $in: course.enrolled } };
-      const students = await getUsersByQuery(query);
-      students.forEach((student) => {
-        csvString += `\n${student._id},${student.name},${student.email}`;
-      });
+      if (req.user.role === 'admin' || req.user.id === course.instructorId.toString()) {
+        let csvString = 'id,name,email';
+        const query = { _id: { $in: course.enrolled } };
+        const students = await getUsersByQuery(query);
+        students.forEach((student) => {
+          csvString += `\n${student._id},${student.name},${student.email}`;
+        });
 
-      res.setHeader('Content-Type', 'text/csv');
-      res.status(200).send(csvString);
+        res.setHeader('Content-Type', 'text/csv');
+        res.status(200).send(csvString);
+      } else {
+        res.status(403).send({
+          error: 'This action requires admin or course instructor authentication',
+        });
+      }
     } else {
       next();
     }
