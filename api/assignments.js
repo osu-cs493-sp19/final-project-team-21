@@ -244,7 +244,11 @@ router.post('/:id/submissions', requireAuthentication, upload.single('file'), as
       error: 'Error inserting submission into DB. Please try again later.',
     });
   } finally {
-    await removeUploadedFile(req.file);
+    try {
+      await removeUploadedFile(req.file);
+    } catch (err) {
+      console.error(err);
+    }
   }
 });
 

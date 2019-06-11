@@ -101,15 +101,24 @@ router.patch('/:id', requireAuthentication, async (req, res, next) => {
     const course = await getCourseById(req.params.id);
     if (course) {
       if (req.user.role === 'admin' || req.user.id === course.instructorId.toString()) {
-        const result = await updateCourseById(req.params.id, req.body);
-        if (result) {
-          res.status(200).send({
-            links: {
-              course: `/courses/${req.params.id}`,
-            },
-          });
+        if (
+          !('instructorId' in req.body)
+          || req.body.instructorId === course.instructorId.toString()
+        ) {
+          const result = await updateCourseById(req.params.id, req.body);
+          if (result) {
+            res.status(200).send({
+              links: {
+                course: `/courses/${req.params.id}`,
+              },
+            });
+          } else {
+            next();
+          }
         } else {
-          next();
+          res.status(400).send({
+            error: 'Course\'s instructorId must not be modified',
+          });
         }
       } else {
         res.status(403).send({
@@ -229,6 +238,7 @@ router.get('/:id/roster', requireAuthentication, async (req, res, next) => {
           csvString += `\n${student._id},${student.name},${student.email}`;
         });
 
+        res.setHeader('Content-disposition', 'attachment; filename=roster.csv');
         res.setHeader('Content-Type', 'text/csv');
         res.status(200).send(csvString);
       } else {

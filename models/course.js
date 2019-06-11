@@ -53,6 +53,8 @@ const getCoursesPage = async (params) => {
 
 const insertNewCourse = async (rawCourse) => {
   const course = extractValidFields(rawCourse, CourseSchema);
+  course.enrolled = [];
+  course.instructorId = new ObjectId(course.instructorId);
   const db = getDBReference();
   const collection = db.collection('courses');
   const result = await collection.insertOne(course);
@@ -82,6 +84,11 @@ const getCoursesByQuery = async (query) => {
 
 const updateCourseById = async (id, rawFields) => {
   const newFields = extractValidFields(rawFields, CourseSchema);
+  // We have already confirmed that instructorId is the same so it does not need to be updated
+  delete newFields.instructorId;
+  if (Object.keys(newFields).length === 0) {
+    return true;
+  }
   const db = getDBReference();
   const collection = db.collection('courses');
   if (!ObjectId.isValid(id)) {

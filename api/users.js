@@ -68,6 +68,7 @@ router.get('/:id', requireAuthentication, async (req, res, next) => {
     try {
       const user = await getUserDetailsById(req.params.id);
       if (user) {
+        delete user.password;
         res.status(200).send(user);
       } else {
         next();

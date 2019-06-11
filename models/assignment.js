@@ -54,6 +54,9 @@ const updateAssignmentById = async (id, rawFields) => {
   const newFields = extractValidFields(rawFields, AssignmentSchema);
   // We have already confirmed that courseId is the same so it does not need to be updated
   delete newFields.courseId;
+  if (Object.keys(newFields).length === 0) {
+    return true;
+  }
   const db = getDBReference();
   const collection = db.collection('assignments');
   if (!ObjectId.isValid(id)) {
