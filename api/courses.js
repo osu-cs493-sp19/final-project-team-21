@@ -75,7 +75,7 @@ router.post('/', requireAuthentication, async (req, res) => {
   } else {
     res.status(403).send({
       error: 'This action requires admin authentication',
-    })
+    });
   }
 });
 
@@ -97,14 +97,10 @@ router.get('/:id', async (req, res, next) => {
 });
 
 router.patch('/:id', requireAuthentication, async (req, res, next) => {
-  const PatchCourseSchema = CourseSchema;
-  Object.keys(PatchCourseSchema).forEach((key) => {
-    PatchCourseSchema[key] = { required: false };
-  });
-  const course = await getCourseById(req.params.id);
-  if (course) {
-    if (req.user.role === 'admin' || req.user.id === course.instructorId.toString()) {
-      if (validateAgainstSchema(req.body, PatchCourseSchema)) {
+  try {
+    const course = await getCourseById(req.params.id);
+    if (course) {
+      if (req.user.role === 'admin' || req.user.id === course.instructorId.toString()) {
         const result = await updateCourseById(req.params.id, req.body);
         if (result) {
           res.status(200).send({
@@ -116,25 +112,35 @@ router.patch('/:id', requireAuthentication, async (req, res, next) => {
           next();
         }
       } else {
-        res.status(400).send({ error: 'Request body is not a valid course object' });
+        res.status(403).send({
+          error: 'This action requires admin or course instructor authentication',
+        });
       }
     } else {
-      res.status(403).send({
-        error: 'This action requires admin or course instructor authentication',
-      });
+      next();
     }
-  } else {
-    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      error: 'Unable to update course. Please try again later.',
+    });
   }
 });
 
 router.delete('/:id', requireAuthentication, async (req, res, next) => {
   if (req.user.role === 'admin') {
-    const result = await deleteCourseById(req.params.id);
-    if (result) {
-      res.status(204).send();
-    } else {
-      next();
+    try {
+      const result = await deleteCourseById(req.params.id);
+      if (result) {
+        res.status(204).send();
+      } else {
+        next();
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500).send({
+        error: 'Unable to delete course. Please try again later.',
+      });
     }
   } else {
     res.status(403).send({

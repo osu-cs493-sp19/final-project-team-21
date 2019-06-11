@@ -133,7 +133,7 @@ const deleteCourseById = async (id) => {
   }
   const assignments = await getAssignmentsByCourseId(id);
   await Promise.all(assignments.map(
-    async assignment => deleteAssignmentById(assignment._id.toString())
+    async assignment => deleteAssignmentById(assignment._id.toString()),
   ));
   return true;
 };
