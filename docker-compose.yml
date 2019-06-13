@@ -10,22 +10,54 @@ services:
       MONGO_DATABASE: ${MONGO_DATABASE}
       MONGO_USER: ${MONGO_USER}
       MONGO_PASSWORD: ${MONGO_PASSWORD}
-      MONGO_HOST: mongodb
+      MONGO_HOST: mongodb-1
       MONGO_PORT: 27017
+      MONGO_REPL_SET_NAME: ${MONGO_REPL_SET_NAME}
       JWT_SECRET: ${JWT_SECRET}
 
-  mongodb:
+  mongodb-1:
     image: mongo:latest
     restart: always
     volumes:
-      - mongo-data:/data/db
       - ./db-init/:/docker-entrypoint-initdb.d
+      - ./mongodb-keyfile:/data/mongodb-keyfile:ro
+      - mongo-data-db-1:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
+      MONGO_DATABASE: ${MONGO_DATABASE}
       MONGO_USER: ${MONGO_USER}
       MONGO_PASSWORD: ${MONGO_PASSWORD}
+    command: --keyFile /data/mongodb-keyfile --replSet ${MONGO_REPL_SET_NAME}
+
+  mongodb-2:
+    image: mongo:latest
+    restart: always
+    volumes:
+      - ./db-init/:/docker-entrypoint-initdb.d
+      - ./mongodb-keyfile:/data/mongodb-keyfile:ro
+      - mongo-data-db-2:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+    command: --keyFile /data/mongodb-keyfile --replSet ${MONGO_REPL_SET_NAME}
+
+  mongodb-repl-set-init:
+    image: mongo:latest
+    volumes:
+      - ./rs-init:/rs-init/
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_REPL_SET_NAME: ${MONGO_REPL_SET_NAME}
+      MONGO_REPL_SET_HOSTS: mongodb-1 mongodb-2
+    entrypoint: sh /rs-init/rs-init.sh
 
 volumes:
-  mongo-data:
+  mongo-data-db-1: {}
+  mongo-data-db-2: {}

@@ -1,28 +1,33 @@
+mongo <<-EOJS
+
+use $MONGO_INITDB_DATABASE
+db.auth("$MONGO_USER", "$MONGO_PASSWORD")
+
 db.users.createIndex({ 'email': 1 }, { unique: true })
 
 const { insertedIds: insertedUserIds } = db.users.insertMany([
   {
     name: 'Jane Doe Admin',
     email: 'doejadm@oregonstate.edu',
-    password: '$2a$08$Ztpw.e9eSP6fZGNDaKyqSebYcmSEdIW8pPsbjePs5lDb7MOMn1GVy',
+    password: '\$2a\$08\$Ztpw.e9eSP6fZGNDaKyqSebYcmSEdIW8pPsbjePs5lDb7MOMn1GVy',
     role: 'admin',
   },
   {
     name: 'Jane Doe Instructor',
     email: 'doejins@oregonstate.edu',
-    password: '$2a$08$Ztpw.e9eSP6fZGNDaKyqSebYcmSEdIW8pPsbjePs5lDb7MOMn1GVy',
+    password: '\$2a\$08\$Ztpw.e9eSP6fZGNDaKyqSebYcmSEdIW8pPsbjePs5lDb7MOMn1GVy',
     role: 'instructor',
   },
   {
     name: 'Jane Doe Student',
     email: 'doejstu@oregonstate.edu',
-    password: '$2a$08$Ztpw.e9eSP6fZGNDaKyqSebYcmSEdIW8pPsbjePs5lDb7MOMn1GVy',
+    password: '\$2a\$08\$Ztpw.e9eSP6fZGNDaKyqSebYcmSEdIW8pPsbjePs5lDb7MOMn1GVy',
     role: 'student',
   },
   {
     name: 'Another Student',
     email: 'studastu@oregonstate.edu',
-    password: '$2a$08$Ztpw.e9eSP6fZGNDaKyqSebYcmSEdIW8pPsbjePs5lDb7MOMn1GVy',
+    password: '\$2a\$08\$Ztpw.e9eSP6fZGNDaKyqSebYcmSEdIW8pPsbjePs5lDb7MOMn1GVy',
     role: 'student',
   },
 ]);
@@ -45,3 +50,4 @@ db.assignments.insertOne({
   points: 100,
   due: '2019-06-14T17:00:00-07:00',
 });
+EOJS
