@@ -19,7 +19,11 @@ const getCoursesPage = async (params) => {
   const query = {};
   ['subject', 'number', 'term'].forEach((field) => {
     if (field in params) {
-      query[field] = params[field];
+      if (field === 'number') {
+        query[field] = parseInt(params[field], 10);
+      } else {
+        query[field] = params[field];
+      }
     }
   });
 
