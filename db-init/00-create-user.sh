@@ -19,12 +19,24 @@ _js_escape() {
 # If the MONGO_USER, MONGO_PASSWORD, and MONGO_INITDB_DATABASE variables are
 # defined, then feed JS into mongo to create a user with the specified
 # credentials.
+# if [ "$MONGO_USER" ] && [ "$MONGO_PASSWORD" ] && [ "$MONGO_INITDB_DATABASE" ]; then
+# 	mongo --quiet "$MONGO_INITDB_DATABASE" <<-EOJS
+# 		db.createUser({
+# 			user: $(_js_escape "$MONGO_USER"),
+# 			pwd: $(_js_escape "$MONGO_PASSWORD"),
+# 			roles: [ { role: "readWrite", db: $(_js_escape "$MONGO_INITDB_DATABASE") } ]
+# 		})
+# 	EOJS
+# fi
 if [ "$MONGO_USER" ] && [ "$MONGO_PASSWORD" ] && [ "$MONGO_INITDB_DATABASE" ]; then
-	mongo --quiet "$MONGO_INITDB_DATABASE" <<-EOJS
-		db.createUser({
-			user: $(_js_escape "$MONGO_USER"),
-			pwd: $(_js_escape "$MONGO_PASSWORD"),
-			roles: [ { role: "readWrite", db: $(_js_escape "$MONGO_INITDB_DATABASE") } ]
-		})
+	mongo --username "$MONGO_INITDB_ROOT_USERNAME" \
+		--password "$MONGO_INITDB_ROOT_PASSWORD" \
+		--authenticationDatabase admin \
+		--quiet "$MONGO_INITDB_DATABASE" <<-EOJS
+			db.createUser({
+				user: $(_js_escape "$MONGO_USER"),
+				pwd: $(_js_escape "$MONGO_PASSWORD"),
+				roles: [ { role: "readWrite", db: $(_js_escape "$MONGO_INITDB_DATABASE") } ]
+			})
 	EOJS
 fi
