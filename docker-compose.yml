@@ -16,11 +16,13 @@ services:
       JWT_SECRET: ${JWT_SECRET}
 
   mongodb-1:
-    image: mongo:latest
+    build:
+      context: .
+      dockerfile: ./Dockerfile-mongodb
+    image: mongodb-1
     restart: always
     volumes:
       - ./db-init/:/docker-entrypoint-initdb.d
-      - ./mongodb-keyfile:/data/mongodb-keyfile:ro
       - mongo-data-db-1:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
@@ -32,11 +34,13 @@ services:
     command: --keyFile /data/mongodb-keyfile --replSet ${MONGO_REPL_SET_NAME}
 
   mongodb-2:
-    image: mongo:latest
+    build:
+      context: .
+      dockerfile: ./Dockerfile-mongodb
+    image: mongodb-2
     restart: always
     volumes:
       - ./db-init/:/docker-entrypoint-initdb.d
-      - ./mongodb-keyfile:/data/mongodb-keyfile:ro
       - mongo-data-db-2:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
