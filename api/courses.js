@@ -235,7 +235,7 @@ router.get('/:id/roster', requireAuthentication, async (req, res, next) => {
         const query = { _id: { $in: course.enrolled } };
         const students = await getUsersByQuery(query);
         students.forEach((student) => {
-          csvString += `\n${student._id},${student.name},${student.email}`;
+          csvString += `\n${student._id},"${student.name}","${student.email}"`;
         });
 
         res.setHeader('Content-disposition', 'attachment; filename=roster.csv');
