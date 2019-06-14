@@ -199,7 +199,7 @@ router.get('/:id/submissions', requireAuthentication, async (req, res, next) => 
 
 router.post('/:id/submissions', requireAuthentication, upload.single('file'), async (req, res, next) => {
   try {
-    if (validateAgainstSchema(req.body, SubmissionSchema)) {
+    if (validateAgainstSchema(req.body, SubmissionSchema) && req.file) {
       const assignment = await getAssignmentById(req.params.id);
       if (assignment) {
         const course = await getCourseById(assignment.courseId.toString());
